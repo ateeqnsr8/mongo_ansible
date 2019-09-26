@@ -1,0 +1,5 @@
+---
+- name: install
+  hosts: ateeq-Inspiron-3542
+  roles:
+    - mongodb

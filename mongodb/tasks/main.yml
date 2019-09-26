@@ -1,0 +1,133 @@
+---
+# tasks file for mongoDB setup
+
+- name: add repo
+  src: mongodb-org-3.6.repo
+  dest: /etc/yum.repos.d/mongodb-org-3.6.repo
+  
+- name: install mongoDB
+  apt: 
+    name: mongodb-org-3.6.14 mongodb-org-server-3.6.14 mongodb-org-shell-3.6.14 mongodb-org-mongos-3.6.14 mongodb-org-tools-3.6.14
+    state: present
+    update_cache: yes
+
+#- name: copy config file
+#  copy:
+#    src: mongod.conf
+#    dest: /etc/mongod.conf
+#    owner: root
+#    group: root
+#    mode: 0644
+#  notify:
+#    - restart mongodb
+
+- name: create /etc/security/limits.d/mongodb.conf
+  copy:
+    src: security-mongodb.conf
+    dest: /etc/security/limits.d/mongodb.conf
+    owner: root
+    group: root
+    mode: 0644
+#  notify:
+#    - restart mongod
+
+- parted:
+    device: /dev/sdb
+    number: 1
+    state: present
+
+- name: Create a xfs filesystem on /dev/sdb1
+  filesystem:
+    fstype: xfs
+    dev: /dev/sdb1
+
+- name: Mount
+  mount:
+    path: /MongoDB
+    src: /dev/sdb1
+    fstype: xfs
+    opts: rw,noatime
+    state: present
+
+- name: disables transparent-huge-pages
+  copy:
+    src: disable-transparent-hugepages
+    dest: "/etc/init.d/disable-transparent-hugepages"
+    mode: 0755
+  tags:
+  - mongo
+
+- name: run service disable transparent hugepages
+  service:
+    name: disable-transparent-hugepages
+    state: started
+    enabled: yes
+  when: not ansible_check_mode
+  tags:
+  - mongo 
+
+- name: disable Numa
+  sysctl:
+    name: vm.zone_reclaim_mode
+    value: '0'
+    state: present  
+    
+- name:  Set vm.dirty_ratio 
+  sysctl:
+    name: vm.dirty_ratio
+    value: '15'
+    state: present
+
+- name:  Set vm.dirty_background_ratio 
+  sysctl:
+    name: vm.dirty_background_ratio
+    value: '5'
+    state: present
+
+- name: Set vm.swappiness
+  sysctl:
+    name: vm.swappiness
+    value: '10'
+    state: present
+
+- name: Set net.core.somaxconn 
+  sysctl:
+    name: net.core.somaxconn
+    value: '4096'
+    state: present
+
+- name: Set net.ipv4.tcp_fin_timeout
+  sysctl:
+    name: net.ipv4.tcp_fin_timeout
+    value: '30'
+    state: present
+
+- name: net.ipv4.tcp_keepalive_intvl
+  sysctl:
+    name: net.ipv4.tcp_keepalive_intvl
+    value: '30'
+    state: present
+
+- name: net.ipv4.tcp_keepalive_time
+  sysctl:
+    name: net.ipv4.tcp_keepalive_time
+    value: '200'
+    state: present
+
+- name: net.ipv4.tcp_max_syn_backlog 
+  sysctl:
+    name: net.ipv4.tcp_max_syn_backlog 
+    value: '4096'
+    state: present
+
+#- name: Ensure mongodb is running and and enabled to start automatically on reboots
+#  systemd:
+#    name: mongod
+#    enabled: yes
+#    state: started
+
+- name: install ntp
+  apt: 
+    name: ntp
+    state: present
+    update_cache: yes

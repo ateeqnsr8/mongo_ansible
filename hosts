@@ -1,0 +1,8 @@
+[all:vars]
+
+[ateeq-Inspiron-3542]
+172.16.10.164 ansible_user=ateeq  ansible_python_interpreter="/usr/bin/env python"
+
+
+
+
